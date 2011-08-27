@@ -6,4 +6,6 @@
     android:layout_height="fill_parent"
     android:clickable="true"
     android:apiKey="GOOGLE_API_KEY_PLACEHOLDER"
-/>
+>
+
+</com.google.android.maps.MapView>
