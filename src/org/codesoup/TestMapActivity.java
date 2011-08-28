@@ -146,6 +146,7 @@ public class TestMapActivity extends MapActivity {
 			if (points.size() > 0) {
 				populate();
 				mapView.getController().setCenter(getCenter());
+				mapView.getController().setZoom(13);
 				mapView.invalidate();
 			}
 		}
