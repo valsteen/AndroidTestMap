@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:titleCondensed="Get Token" android:title="Get Token" android:id="@+id/get_token"></item>
+    <item android:titleCondensed="Reset Token" android:title="Reset Token" android:id="@+id/reset_token"></item>
+    
+</menu>

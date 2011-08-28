@@ -23,6 +23,7 @@ public class ActivityWebView extends Activity
         // We can override onPageStarted() in the web client and grab the code out.
         WebView webview = (WebView)findViewById(R.id.webview);
         webview.getSettings().setJavaScriptEnabled(true);
+        webview.stopLoading();
         webview.setWebViewClient(new WebViewClient() {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 String fragment = "?code=";
@@ -34,11 +35,6 @@ public class ActivityWebView extends Activity
                     resultIntent.putExtra("code", code);                    
                     ActivityWebView.this.setResult(Activity.RESULT_OK, resultIntent);
                 	ActivityWebView.this.finish();
-                } else if (url.indexOf("client_id") == -1) { // not the request to foursquare
-                	ActivityWebView.this.setResult(Activity.RESULT_CANCELED);
-                	
-                	// postpone this, apparently
-                	//ActivityWebView.this.finish();
                 }
             }
         });

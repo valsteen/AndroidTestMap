@@ -8,12 +8,15 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.Toast;
 import com.google.android.maps.*;
 import fi.foyt.foursquare.api.*;
 import fi.foyt.foursquare.api.entities.Checkin;
 import fi.foyt.foursquare.api.entities.CompactVenue;
-import fi.foyt.foursquare.api.entities.CompleteUser;
 import fi.foyt.foursquare.api.entities.Location;
 
 
@@ -28,7 +31,23 @@ public class TestMapActivity extends MapActivity {
 	private String _fsqToken; 
 	private FoursquareApi foursquareapi ;
 	
-	public String getFsqToken() {
+	private Vector<TokenCallback> tokenConsummers = new Vector<TokenCallback>();
+	
+	private void callTokenConsummers() {
+		synchronized (tokenConsummers) {
+			for (TokenCallback cb : tokenConsummers) {
+				cb.doIt();
+			}
+			tokenConsummers.clear();
+		}
+	}
+	
+	public String getFsqToken(TokenCallback cb) {
+		if (cb != null) {
+			tokenConsummers.add(cb);
+		}
+		
+		// TODO : webview seems to be called even when token is present ? ( click 2 times on get token )
 		if (_fsqToken == null) {
 		    _fsqToken = getPreferences(MODE_PRIVATE).getString(FSQTOKEN_PREF, null);
 		    if (_fsqToken == null) {
@@ -37,19 +56,55 @@ public class TestMapActivity extends MapActivity {
 				intent.putExtra("url", TestMapActivity.this.getFourSquareApi().getAuthenticationUrl());
 		        TestMapActivity.this.startActivityForResult(intent, 1);
 		    } else {
-		    	// TODO : test if token is still valid
+		    	getFourSquareApi().setoAuthToken(_fsqToken);
 		    	Toast.makeText(this, "Got saved token", Toast.LENGTH_SHORT).show();
 		    }
 		}
+		if (_fsqToken != null) callTokenConsummers();
 		return _fsqToken;
 	}
+	
+	public String getFsqToken() {
+		return getFsqToken(null);
+	}
 
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+	    MenuInflater inflater = getMenuInflater();
+	    inflater.inflate(R.menu.menu, menu);
+	    return true;
+	}
+	
+	interface TokenCallback {
+		public void doIt();
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+	    // Handle item selection
+	    switch (item.getItemId()) {
+	    case R.id.get_token:
+	    	getFsqToken(new TokenCallback() {				
+				public void doIt() {
+					test4sq();
+				}
+			});
+	        return true;
+	    case R.id.reset_token:
+	        setFsqToken(null);
+	        return true;
+	    default:
+	        return super.onOptionsItemSelected(item);
+	    }
+	}
+	
 	public void setFsqToken(String fsqToken) {
 		this._fsqToken = fsqToken;
 		
 		SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
 	    
 	    if (fsqToken != null) {
+	    	foursquareapi.setoAuthToken(_fsqToken);
 		    editor.putString(FSQTOKEN_PREF, fsqToken);
 		    
 	    	Toast.makeText(this, "Saving token " + fsqToken, Toast.LENGTH_SHORT).show();
@@ -64,7 +119,6 @@ public class TestMapActivity extends MapActivity {
 	private FoursquareApi getFourSquareApi() {
 		if (foursquareapi == null) {
 			foursquareapi = new FoursquareApi(CLIENT_ID, CLIENT_SECRET, CALLBACK_URL);
-			foursquareapi.setoAuthToken(getFsqToken());
 		}
 		return foursquareapi;
 	}
@@ -76,8 +130,6 @@ public class TestMapActivity extends MapActivity {
         super.onCreate(savedInstanceState);
         
         setContentView(R.layout.main);
-        
-        /* setup overlay on map. Only used for onTap for now */
         
         mapView = (MapView)findViewById(R.id.mapview);
         mapView.setBuiltInZoomControls(true);
@@ -93,10 +145,14 @@ public class TestMapActivity extends MapActivity {
     	FoursquareApi fsq = getFourSquareApi();
     	
     	try {
+    		/* TODO -- should be cached */
 			Result<Checkin[]> checkins = fsq.checkinsRecent(null, null, null);
 			
 			if (checkins.getMeta().getCode() != 200) {
 				// token was invalid ? reset
+				// TODO -- should catch it elsewhere ( callback/delegate/ ... )
+				/* ??? didn't work */
+				Toast.makeText(this, "token invalid " + checkins.getMeta().getErrorDetail().toString(), Toast.LENGTH_LONG).show();
 	    		setFsqToken(null);
 	    		return;
 	    	}
@@ -106,27 +162,6 @@ public class TestMapActivity extends MapActivity {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-    	/*
-    	String name;
-		try {
-			Result<CompleteUser> user = fsq.user(null);
-			if (user != null) {
-				CompleteUser result = user.getResult();
-				if (result != null) {
-					name = result.getFirstName();	
-				} else {
-					name = "result is null";
-				}
-			} else {
-			    name = "user is null";
-			}
-			
-		} catch (FoursquareApiException e) {
-			name = "foursquare error";
-			e.printStackTrace();
-		}
-    	Toast.makeText(this, name, Toast.LENGTH_SHORT).show();
-    	*/
     }
     
 	@Override
@@ -143,17 +178,6 @@ public class TestMapActivity extends MapActivity {
 			populate();
 		}
 		
-		@Override
-		public boolean onTap(GeoPoint p, MapView mapView) {			
-			if (getFsqToken() != null) {
-				test4sq();
-			}
-			return true;
-		}
-		@Override
-		public void draw(android.graphics.Canvas canvas, MapView mapView, boolean shadow) {
-			super.draw(canvas, mapView, shadow);
-		};
 		@Override
 		protected OverlayItem createItem(int i) {
 			return new OverlayItem(points.get(i), "", "");
@@ -200,8 +224,12 @@ public class TestMapActivity extends MapActivity {
 			
 			try {
 				foursquareapi.authenticateCode(fsqCode);
-				
-				setFsqToken(foursquareapi.getOAuthToken());
+				String token = foursquareapi.getOAuthToken();
+				if (token != null) {
+					setFsqToken(token);
+					callTokenConsummers();
+					return;
+				}
 			} catch (FoursquareApiException e) {
 				e.printStackTrace();
 				return;
