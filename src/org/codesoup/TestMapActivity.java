@@ -1,12 +1,19 @@
 package org.codesoup;
 
+import java.security.InvalidAlgorithmParameterException;
+import java.util.List;
+import java.util.Vector;
+
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.widget.Toast;
 import com.google.android.maps.*;
 import fi.foyt.foursquare.api.*;
+import fi.foyt.foursquare.api.entities.Checkin;
+import fi.foyt.foursquare.api.entities.CompactVenue;
 import fi.foyt.foursquare.api.entities.CompleteUser;
+import fi.foyt.foursquare.api.entities.Location;
 
 public class TestMapActivity extends MapActivity {
  
@@ -23,6 +30,8 @@ public class TestMapActivity extends MapActivity {
 		return foursquareapi;
 	}
 	
+	TestOverlay overlay;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,13 +46,20 @@ public class TestMapActivity extends MapActivity {
         marker.setBounds((int)-marker.getIntrinsicWidth()/2, (int)-marker.getIntrinsicHeight()/2,
         	 (int)marker.getIntrinsicWidth()/2, (int)marker.getIntrinsicHeight()/2);
         
-        TestOverlay overlay = new TestOverlay(new GeoPoint(0,0), marker);
+        overlay = new TestOverlay(new GeoPoint(0,0), marker);
         mapView.getOverlays().add(overlay);
     }
 
     private void test4sq() {
     	FoursquareApi fsq = getFourSquareApi();
-    	
+    	try {
+			Result<Checkin[]> checkins = fsq.checkinsRecent(null, null, null);
+			overlay.setCheckins(checkins.getResult());
+		} catch (FoursquareApiException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+    	/*
     	String name;
 		try {
 			Result<CompleteUser> user = fsq.user(null);
@@ -63,6 +79,7 @@ public class TestMapActivity extends MapActivity {
 			e.printStackTrace();
 		}
     	Toast.makeText(this, name, Toast.LENGTH_SHORT).show();
+    	*/
     }
     
 	@Override
@@ -72,16 +89,11 @@ public class TestMapActivity extends MapActivity {
 	}
 
 	class TestOverlay extends ItemizedOverlay<OverlayItem> {
-		private OverlayItem foreveralone ; 
-		
-		public void setCenter(GeoPoint p) {
-			foreveralone = new OverlayItem(p, "My point", "Is great");
-			populate();
-		}
+		Vector<GeoPoint> points; 
 		
 		public TestOverlay(GeoPoint center, Drawable defaultMarker) {
 			super(defaultMarker);
-			setCenter(center);
+			populate();
 		}
 		
 		@Override
@@ -104,14 +116,39 @@ public class TestMapActivity extends MapActivity {
 		};
 		@Override
 		protected OverlayItem createItem(int i) {
-			return foreveralone;
+			return new OverlayItem(points.get(i), "", "");
 		}
 
 		@Override
 		public int size() {
-			// TODO Auto-generated method stub
-			return foreveralone == null ? 0 : 1;
-		}	
+			if (points == null) return 0;
+			return points.size();
+		}
+		
+		public void setCheckins(Checkin[] checkins) {
+			points = new Vector<GeoPoint>();
+			for (Checkin checkin : checkins) {
+				Location location = checkin.getLocation();
+				if (location != null) {
+					GeoPoint geopoint = new GeoPoint((int)(location.getLat()*1E6), (int)(location.getLng()*1E6));
+					points.add(geopoint);
+				} else {
+					CompactVenue venue = checkin.getVenue();
+					if (venue != null) {
+						location = venue.getLocation();
+						if (location != null) {
+							GeoPoint geopoint = new GeoPoint((int)(location.getLat()*1E6), (int)(location.getLng()*1E6));
+							points.add(geopoint);
+						}
+					}
+				}
+			}
+			if (points.size() > 0) {
+				populate();
+				mapView.getController().setCenter(getCenter());
+				mapView.invalidate();
+			}
+		}
 	}
 	
 	@Override

@@ -37,7 +37,9 @@ public class ActivityWebView extends Activity
                 	ActivityWebView.this.finish();
                 } else if (url.indexOf("client_id") == -1) { // not the request to foursquare
                 	ActivityWebView.this.setResult(Activity.RESULT_CANCELED);
-                	ActivityWebView.this.finish();
+                	
+                	// postpone this, apparently
+                	//ActivityWebView.this.finish();
                 }
             }
         });
