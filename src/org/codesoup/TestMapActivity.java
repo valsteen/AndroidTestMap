@@ -41,6 +41,17 @@ public class TestMapActivity extends MapActivity {
         mapView.getOverlays().add(overlay);
     }
 
+    private void test4sq() {
+    	try {
+	    	JSONObject userJson = executeHttpGet("https://api.foursquare.com/v2/users/self?oauth_token=" + fsqToken);
+	    	String username = userJson.getJSONObject("response").getJSONObject("user").getString("firstName");
+	    	Log.i("OK",username);
+	    	Toast.makeText(this, "user is " + username, Toast.LENGTH_SHORT).show();
+    	} catch (Exception e) {
+    		Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
+    	}
+    }
+    
 	@Override
 	protected boolean isRouteDisplayed() {
 		// TODO Auto-generated method stub
@@ -87,6 +98,7 @@ public class TestMapActivity extends MapActivity {
 		        TestMapActivity.this.startActivityForResult(intent, 1);
 			} else {
 				Toast.makeText(TestMapActivity.this, "Already got: " + fsqToken, Toast.LENGTH_SHORT).show();
+				test4sq();
 			}
 			return true;
 		}
@@ -113,6 +125,7 @@ public class TestMapActivity extends MapActivity {
 			fsqToken = data.getStringExtra("token");
 			if (fsqToken != null) {
 				Toast.makeText(this, "Token: " + fsqToken, Toast.LENGTH_SHORT).show();
+				test4sq();
 				return;
 			} 
 		} 
