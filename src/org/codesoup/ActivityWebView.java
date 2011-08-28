@@ -1,51 +1,24 @@
-/**
- * Copyright 2011 Mark Wyszomierski
- */
 package org.codesoup;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
 
-/**
- * https://developer.foursquare.com/docs/oauth.html
- * https://foursquare.com/oauth/
- * 
- * @date May 17, 2011
- * @author Mark Wyszomierski (markww@gmail.com)
- */
+/* TODO -- might be used for any other app with oauth ? */
+
 public class ActivityWebView extends Activity 
-{
-    private static final String TAG = "ActivityWebView";
-	
-    /**
-     * Get these values after registering your oauth app at: https://foursquare.com/oauth/
-     */
-    /*
-    public static final String CALLBACK_URL = "http://codesoup.org/android/4sq/";
-    public static final String CLIENT_ID = "CLIENT_ID_PLACEHOLDER";
-	*/
-    
+{	
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_webview);
         String url = getIntent().getStringExtra("url");
-        /*
-        String url =
-            "https://foursquare.com/oauth2/authenticate" + 
-                "?client_id=" + CLIENT_ID + 
-                "&response_type=token" + 
-                "&redirect_uri=" + CALLBACK_URL;
-        */
         // If authentication works, we'll get redirected to a url with a pattern like:  
         //
-        //    http://YOUR_REGISTERED_REDIRECT_URI/#access_token=ACCESS_TOKEN
+        //    http://YOUR_REGISTERED_REDIRECT_URI/?code=ACCESS_TOKEN
         //
         // We can override onPageStarted() in the web client and grab the token out.
         WebView webview = (WebView)findViewById(R.id.webview);

@@ -11,9 +11,7 @@ import org.json.JSONObject;
 
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 import com.google.android.maps.*;
 import fi.foyt.foursquare.api.*;
@@ -39,6 +37,8 @@ public class TestMapActivity extends MapActivity {
         super.onCreate(savedInstanceState);
         
         setContentView(R.layout.main);
+        
+        /* setup overlay on map. Only used for onTap for now */
         
         mapView = (MapView)findViewById(R.id.mapview);
         mapView.setBuiltInZoomControls(true);
@@ -72,16 +72,6 @@ public class TestMapActivity extends MapActivity {
 			e.printStackTrace();
 		}
     	Toast.makeText(this, name, Toast.LENGTH_SHORT).show();
-    	/*
-    	try {
-	    	JSONObject userJson = executeHttpGet("https://api.foursquare.com/v2/users/self?oauth_token=" + fsqToken);
-	    	String username = userJson.getJSONObject("response").getJSONObject("user").getString("firstName");
-	    	Log.i("OK",username);
-	    	Toast.makeText(this, "user is " + username, Toast.LENGTH_SHORT).show();
-    	} catch (Exception e) {
-    		Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
-    	}
-    	*/
     }
     
 	@Override
@@ -90,24 +80,6 @@ public class TestMapActivity extends MapActivity {
 		return false;
 	}
 
-	// Calls a URI and returns the answer as a JSON object
-	private JSONObject executeHttpGet(String uri) throws Exception{
-		HttpGet req = new HttpGet(uri);
-
-		HttpClient client = new DefaultHttpClient();
-		HttpResponse resLogin = client.execute(req);
-		BufferedReader r = new BufferedReader(
-				new InputStreamReader(resLogin.getEntity()
-						.getContent()));
-		StringBuilder sb = new StringBuilder();
-		String s = null;
-		while ((s = r.readLine()) != null) {
-			sb.append(s);
-		}
-
-		return new JSONObject(sb.toString());
-	}
-	
 	class TestOverlay extends ItemizedOverlay<OverlayItem> {
 		private OverlayItem foreveralone ; 
 		
