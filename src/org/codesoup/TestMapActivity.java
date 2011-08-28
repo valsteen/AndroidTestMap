@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Vector;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -15,18 +16,56 @@ import fi.foyt.foursquare.api.entities.CompactVenue;
 import fi.foyt.foursquare.api.entities.CompleteUser;
 import fi.foyt.foursquare.api.entities.Location;
 
+
 public class TestMapActivity extends MapActivity {
  
 	private static final String CLIENT_ID = "CLIENT_ID_PLACEHOLDER";
 	private static final String CLIENT_SECRET = "CLIENT_SECRET_PLACEHOLDER";
-	private static final String CALLBACK_URL = "http://codesoup.org/android/4sq/";	
+	private static final String CALLBACK_URL = "http://codesoup.org/android/4sq/";
+	private static final String FSQTOKEN_PREF = "FSQTOKEN";
 	
 	private MapView mapView;
-	private String fsqToken; 
+	private String _fsqToken; 
 	private FoursquareApi foursquareapi ;
 	
+	public String getFsqToken() {
+		if (_fsqToken == null) {
+		    _fsqToken = getPreferences(MODE_PRIVATE).getString(FSQTOKEN_PREF, null);
+		    if (_fsqToken == null) {
+		    	Toast.makeText(this, "Getting token. Please retry when token is available.", Toast.LENGTH_SHORT).show();
+		    	Intent intent = new Intent(TestMapActivity.this, ActivityWebView.class);
+				intent.putExtra("url", TestMapActivity.this.getFourSquareApi().getAuthenticationUrl());
+		        TestMapActivity.this.startActivityForResult(intent, 1);
+		    } else {
+		    	// TODO : test if token is still valid
+		    	Toast.makeText(this, "Got saved token", Toast.LENGTH_SHORT).show();
+		    }
+		}
+		return _fsqToken;
+	}
+
+	public void setFsqToken(String fsqToken) {
+		this._fsqToken = fsqToken;
+		
+		SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
+	    
+	    if (fsqToken != null) {
+		    editor.putString(FSQTOKEN_PREF, fsqToken);
+		    
+	    	Toast.makeText(this, "Saving token " + fsqToken, Toast.LENGTH_SHORT).show();
+	    } else {
+	    	editor.remove(FSQTOKEN_PREF);
+	    	Toast.makeText(this, "Removing fsq token", Toast.LENGTH_SHORT).show();
+	    }
+	    
+	    editor.commit();
+	}
+
 	private FoursquareApi getFourSquareApi() {
-		if (foursquareapi == null) foursquareapi = new FoursquareApi(CLIENT_ID, CLIENT_SECRET, CALLBACK_URL);
+		if (foursquareapi == null) {
+			foursquareapi = new FoursquareApi(CLIENT_ID, CLIENT_SECRET, CALLBACK_URL);
+			foursquareapi.setoAuthToken(getFsqToken());
+		}
 		return foursquareapi;
 	}
 	
@@ -52,8 +91,16 @@ public class TestMapActivity extends MapActivity {
 
     private void test4sq() {
     	FoursquareApi fsq = getFourSquareApi();
+    	
     	try {
 			Result<Checkin[]> checkins = fsq.checkinsRecent(null, null, null);
+			
+			if (checkins.getMeta().getCode() != 200) {
+				// token was invalid ? reset
+	    		setFsqToken(null);
+	    		return;
+	    	}
+			
 			overlay.setCheckins(checkins.getResult());
 		} catch (FoursquareApiException e1) {
 			// TODO Auto-generated catch block
@@ -97,15 +144,8 @@ public class TestMapActivity extends MapActivity {
 		}
 		
 		@Override
-		public boolean onTap(GeoPoint p, MapView mapView) {
-			//mapView.getController().setCenter(p);
-			//mapView.getController().zoomIn();
-			
-			if (fsqToken == null) {
-				Intent intent = new Intent(TestMapActivity.this, ActivityWebView.class);
-				intent.putExtra("url", TestMapActivity.this.getFourSquareApi().getAuthenticationUrl());
-		        TestMapActivity.this.startActivityForResult(intent, 1);
-			} else {
+		public boolean onTap(GeoPoint p, MapView mapView) {			
+			if (getFsqToken() != null) {
 				test4sq();
 			}
 			return true;
@@ -156,16 +196,19 @@ public class TestMapActivity extends MapActivity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		if (resultCode == RESULT_OK && requestCode == 1) {
-			fsqToken = data.getStringExtra("token");
-			if (fsqToken != null) {
-				try {
-					foursquareapi.authenticateCode(fsqToken);
-					Toast.makeText(this, "Token: " + fsqToken, Toast.LENGTH_SHORT).show();
-					test4sq();					
-				} catch (FoursquareApiException e) {
-					Toast.makeText(this, "Error while settings token " + fsqToken, Toast.LENGTH_SHORT).show();
-					e.printStackTrace();
-				}
+			String fsqCode = data.getStringExtra("code");
+			
+			try {
+				foursquareapi.authenticateCode(fsqCode);
+				
+				setFsqToken(foursquareapi.getOAuthToken());
+			} catch (FoursquareApiException e) {
+				e.printStackTrace();
+				return;
+			}
+			
+			if (getFsqToken() != null) {
+				Toast.makeText(this, "Token: " + getFsqToken(), Toast.LENGTH_SHORT).show();
 				return;
 			} 
 		} 

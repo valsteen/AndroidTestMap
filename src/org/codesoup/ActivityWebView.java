@@ -18,9 +18,9 @@ public class ActivityWebView extends Activity
         String url = getIntent().getStringExtra("url");
         // If authentication works, we'll get redirected to a url with a pattern like:  
         //
-        //    http://YOUR_REGISTERED_REDIRECT_URI/?code=ACCESS_TOKEN
+        //    http://YOUR_REGISTERED_REDIRECT_URI/?code=ACCESS_CODE
         //
-        // We can override onPageStarted() in the web client and grab the token out.
+        // We can override onPageStarted() in the web client and grab the code out.
         WebView webview = (WebView)findViewById(R.id.webview);
         webview.getSettings().setJavaScriptEnabled(true);
         webview.setWebViewClient(new WebViewClient() {
@@ -28,11 +28,10 @@ public class ActivityWebView extends Activity
                 String fragment = "?code=";
                 int start = url.indexOf(fragment);
                 if (start > -1) {
-                    // You can use the accessToken for api calls now.
-                    String accessToken = url.substring(start + fragment.length(), url.length());
+                    String code = url.substring(start + fragment.length(), url.length());
                     
                     Intent resultIntent = new Intent();
-                    resultIntent.putExtra("token", accessToken);                    
+                    resultIntent.putExtra("code", code);                    
                     ActivityWebView.this.setResult(Activity.RESULT_OK, resultIntent);
                 	ActivityWebView.this.finish();
                 } else if (url.indexOf("client_id") == -1) { // not the request to foursquare
