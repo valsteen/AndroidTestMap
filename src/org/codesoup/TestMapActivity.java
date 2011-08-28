@@ -16,14 +16,23 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 import com.google.android.maps.*;
+import fi.foyt.foursquare.api.*;
+import fi.foyt.foursquare.api.entities.CompleteUser;
 
 public class TestMapActivity extends MapActivity {
  
-/*	private static final String CLIENT_ID = "CLIENT_ID_PLACEHOLDER";
-	private static final String CLIENT_SECRET = "CLIENT_SECRET_PLACEHOLDER";*/
+	private static final String CLIENT_ID = "CLIENT_ID_PLACEHOLDER";
+	private static final String CLIENT_SECRET = "CLIENT_SECRET_PLACEHOLDER";
+	private static final String CALLBACK_URL = "http://codesoup.org/android/4sq/";	
 	
 	private MapView mapView;
 	private String fsqToken; 
+	private FoursquareApi foursquareapi ;
+	
+	private FoursquareApi getFourSquareApi() {
+		if (foursquareapi == null) foursquareapi = new FoursquareApi(CLIENT_ID, CLIENT_SECRET, CALLBACK_URL);
+		return foursquareapi;
+	}
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -42,6 +51,28 @@ public class TestMapActivity extends MapActivity {
     }
 
     private void test4sq() {
+    	FoursquareApi fsq = getFourSquareApi();
+    	
+    	String name;
+		try {
+			Result<CompleteUser> user = fsq.user(null);
+			if (user != null) {
+				CompleteUser result = user.getResult();
+				if (result != null) {
+					name = result.getFirstName();	
+				} else {
+					name = "result is null";
+				}
+			} else {
+			    name = "user is null";
+			}
+			
+		} catch (FoursquareApiException e) {
+			name = "foursquare error";
+			e.printStackTrace();
+		}
+    	Toast.makeText(this, name, Toast.LENGTH_SHORT).show();
+    	/*
     	try {
 	    	JSONObject userJson = executeHttpGet("https://api.foursquare.com/v2/users/self?oauth_token=" + fsqToken);
 	    	String username = userJson.getJSONObject("response").getJSONObject("user").getString("firstName");
@@ -50,6 +81,7 @@ public class TestMapActivity extends MapActivity {
     	} catch (Exception e) {
     		Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
     	}
+    	*/
     }
     
 	@Override
@@ -93,11 +125,12 @@ public class TestMapActivity extends MapActivity {
 		public boolean onTap(GeoPoint p, MapView mapView) {
 			//mapView.getController().setCenter(p);
 			//mapView.getController().zoomIn();
+			
 			if (fsqToken == null) {
 				Intent intent = new Intent(TestMapActivity.this, ActivityWebView.class);
+				intent.putExtra("url", TestMapActivity.this.getFourSquareApi().getAuthenticationUrl());
 		        TestMapActivity.this.startActivityForResult(intent, 1);
 			} else {
-				Toast.makeText(TestMapActivity.this, "Already got: " + fsqToken, Toast.LENGTH_SHORT).show();
 				test4sq();
 			}
 			return true;
@@ -124,8 +157,14 @@ public class TestMapActivity extends MapActivity {
 		if (resultCode == RESULT_OK && requestCode == 1) {
 			fsqToken = data.getStringExtra("token");
 			if (fsqToken != null) {
-				Toast.makeText(this, "Token: " + fsqToken, Toast.LENGTH_SHORT).show();
-				test4sq();
+				try {
+					foursquareapi.authenticateCode(fsqToken);
+					Toast.makeText(this, "Token: " + fsqToken, Toast.LENGTH_SHORT).show();
+					test4sq();					
+				} catch (FoursquareApiException e) {
+					Toast.makeText(this, "Error while settings token " + fsqToken, Toast.LENGTH_SHORT).show();
+					e.printStackTrace();
+				}
 				return;
 			} 
 		} 

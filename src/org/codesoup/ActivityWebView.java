@@ -26,20 +26,23 @@ public class ActivityWebView extends Activity
     /**
      * Get these values after registering your oauth app at: https://foursquare.com/oauth/
      */
+    /*
     public static final String CALLBACK_URL = "http://codesoup.org/android/4sq/";
     public static final String CLIENT_ID = "CLIENT_ID_PLACEHOLDER";
-	
+	*/
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_webview);
-        
+        String url = getIntent().getStringExtra("url");
+        /*
         String url =
             "https://foursquare.com/oauth2/authenticate" + 
                 "?client_id=" + CLIENT_ID + 
                 "&response_type=token" + 
                 "&redirect_uri=" + CALLBACK_URL;
-        
+        */
         // If authentication works, we'll get redirected to a url with a pattern like:  
         //
         //    http://YOUR_REGISTERED_REDIRECT_URI/#access_token=ACCESS_TOKEN
@@ -49,7 +52,7 @@ public class ActivityWebView extends Activity
         webview.getSettings().setJavaScriptEnabled(true);
         webview.setWebViewClient(new WebViewClient() {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                String fragment = "#access_token=";
+                String fragment = "?code=";
                 int start = url.indexOf(fragment);
                 if (start > -1) {
                     // You can use the accessToken for api calls now.
